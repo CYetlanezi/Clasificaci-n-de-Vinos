@@ -1,0 +1,264 @@
+---
+title: "Proyecto Vinos"
+author: "Claudia Meneses"
+date: "31/3/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(gridExtra)#Compare graph
+library(ggplot2) # Data visualization
+library(readr) # CSV file I/O, e.g. the read_csv function
+library(dplyr)
+library(vtreat) #'data.frame' statiscally procesor
+library(broom) #Convert Statistical Analysis Objects into Tidy Tibbles
+library(caret) #Calssificaton and regretion training
+library(glmnet) #Lasso & Elastic - NEt Regularized Generalied models
+library(Hmisc)#Correlation matrix
+library(factoextra)
+library(class)
+library(corrplot)
+
+#Cargar data
+system("ls ../input")
+data <- read_csv("/Users/claudiameneses/desktop/winedata.csv")
+datos <- data.frame(data[c(2,3,4,5,6,7,8,9,10,11,12,13,14)])
+```
+
+##Introducción
+
+La cata de vinos y su clasificación es tan antigua como su producción. Por ejemplo, Aristóteles propuso una degustación sensorial definida por los cuatro elementos (aire, agua, fuego y tierra) profundizada por la noble romana Lucrecia. Más adelante, en el siglo XIV se formalizó su metodología.  En la actualidad, los catadores de vinos modernos y profesionales (como sommeliers o compradores para minoristas) utilizan una terminología especializada en constante evolución que se utiliza para describir la gama de sabores, aromas y características generales percibidos de un vino.
+
+Los ácidos en el vino son un componente importante tanto en la vinificación como en el producto terminado del vino. Están presentes tanto en las uvas como en el vino, y tienen influencias directas en el color, el equilibrio y el sabor del vino, así como el crecimiento y la vitalidad de la levadura durante la fermentación y la protección del vino de las bacterias. La medida de la cantidad de acidez en el vino se conoce como "acidez valorable" o "acidez total" y se refiere a la prueba que produce el total de todos los ácidos presentes, mientras que la concentración de la acidez se mide según el pH. En general, cuanto más bajo es el pH, mayor es la acidez en el vino. Sin embargo, no existe una conexión directa entre la acidez total y el pH (es posible encontrar vinos con un pH alto para el vino y una alta acidez). 
+
+Se encuentran tres ácidos primarios en las uvas de vino: tartárico, málico y cítrico. Durante el curso de la vinificación y en los vinos terminados, los ácidos acético, butírico, láctico y succínico pueden desempeñar un papel importante. La mayoría de los ácidos relacionados con el vino son ácidos fijos, con la notable excepción del ácido acético, que se encuentra principalmente en el vinagre, que es volátil y puede contribuir a la falla del vino conocida como acidez volátil. A veces, se utilizan ácidos adicionales, como los ácidos ascórbico, sórbico y sulfúrico, en la vinificación.
+
+A continuación, se presentan los datos de 178 vinos con 13 variables de sus propiedades químicas. El propósito del análisis es presentar un resumen de los datos con información relevante, después clasificarlos y por último, tratar de predecir su clasificación.
+
+Las variables químicas que se consideran son:
+
+1. **Tipo** : Clasificación dada que se intentará predecir con base en una muestra.
+
+2. **Ácido málico (Malic_acid)** : El ácido málico, junto con el ácido tartárico, es uno de los principales ácidos orgánicos que se encuentran en las uvas para vino. Se encuentra en casi todas las plantas de frutas y bayas, pero con mayor frecuencia se asocia con manzanas verdes (verdes), el sabor que más fácilmente proyecta en el vino. Su concentración varía según la variedad de uva, con algunas variedades, como Barbera, Carignan y Sylvaner, que se encuentran naturalmente en niveles altos. La pérdida respiratoria de ácido málico es más pronunciada en climas más cálidos. Cuando todo el ácido málico se consume en la uva, se considera "demasiado maduro" o senescente. En general, los vinos tintos se someten más a menudo a través de  la fermentación maloláctica o MLF que los blancos, lo que significa una mayor probabilidad de encontrar ácido málico en los vinos blancos.
+
+3. **Ceniza (Ash)** : La ceniza es una suma de sustancias, que permanecen después de la incineración del residuo de evaporación, por lo que los elementos principales son los metales alcalinos y los metales alcalinotérreos (por ejemplo, potasio, calcio, magnesio, sodio) y fósforo no metálico. Elementos traza como manganeso, zinc, cobre y hierro también están representados. El contenido de ceniza de los productos puede determinarse gravimétricamente o puede calcularse mediante el análisis de cationes y aniones. 
+El contenido de ceniza en el vino se encuentra normalmente entre 1,3 y 3,5 mg / ly está fuertemente influenciado por el balance de agua de la vid. Todas las sustancias relevantes se absorben durante la maduración de la uva a través del suelo, donde los minerales son la mayor parte de la ceniza. Debido a la relación entre las cenizas y el contenido de minerales y oligoelementos, es posible evaluar la calidad del vino con este parámetro. La relación entre la ceniza y la calidad del producto conduce a regulaciones legales para el contenido mínimo de ceniza, por ejemplo, para el vinagre, por lo que el análisis de la ceniza también es importante para la evaluación de las especificaciones del producto.
+
+4. **Alcalinidad de la ceniza (Ash_Alcalinity)** : La alcalinidad de la ceniza se define como la suma de cationes, aparte del ion amonio, combinada con los ácidos orgánicos en el vino. La alcalinidad de las cenizas se expresará en miliequivalentes por litro o en gramos por litro de carbonato de potasio.
+
+5. **Magnesio (Magnesium)** : El magnesio es el elemento químico de símbolo Mg y número atómico 12.  Es el séptimo elemento en abundancia en el orden del 2 % de la corteza terrestre y el tercero más abundante disuelto en el agua de mar. El ion magnesio es esencial para todas las células vivas. El metal puro no se encuentra en la naturaleza. 
+
+6. **Contenido fenólico (Total_Phenoles)** : El contenido fenólico en el vino se refiere a los compuestos fenólicos (fenol natural y polifenoles) en el vino, que incluyen un gran grupo de varios cientos de compuestos químicos que afectan el sabor, el color y la sensación en boca del vino. Estos compuestos incluyen ácidos fenólicos, estilbenoides, flavonoles, dihidroflavonoles, antocianinas, monómeros de flavanol (catequinas) y polímeros de flavanol (proantocianidinas). Este gran grupo de fenoles naturales se puede separar ampliamente en dos categorías, flavonoides y no flavonoides. Los flavonoides incluyen las antocianinas y los taninos que contribuyen al color y la sensación en boca del vino.  Los no flavonoides incluyen los estilbenoides como el resveratrol y los ácidos fenólicos como los ácidos benzoico, cafeico y cinnámico.
+El benzaldehído (vainillina) y el ácido benzoico (ácidos vanílico y gálico) son los compuestos fenólicos que se saben más en los vinos. Las antocianinas son responsables de la pigmentación del vino tinto y están presentes en proporción al color del vino.
+
+7. **Flavanoides** : Es un grupo de compuestos fenólicos que incluyen las antocianinas y los taninos que contribuyen al color y la sensación en boca del vino.
+
+8. **Fenoles no flavanoides (Non_Flavanoides_Phenoles)** : Es un grupo de compuestos fenólicos que incluyen los estilbenoides como el resveratrol y los ácidos fenólicos como los ácidos benzoico, cafeico y cinnámico.
+
+9. **Proantocianidinas (Proanthocyanins)** : Las proantocianidinas son una clase de polifenoles que se encuentran en una variedad de plantas. Químicamente, son flavonoides oligoméricos. Muchos son oligómeros de catequina y epicatequina y sus ésteres de ácido gálico. Las proantocianidinas juegan un papel importante en el vino con la capacidad de unir proteínas salivales, estos taninos condensados influyen fuertemente en la percepción de la astringencia del vino. Estos compuestos suelen estar presentes en niveles de 300 mg / L1 en el vino tinto, aunque el procesamiento enológico puede afectar las concentraciones finales. 
+
+10. **Intensidad de color (Color_intensity)** : Variable que mide que tan intenso es el color del vino.
+
+11. **Tono (Hue)** :  Variable que mide el tono del vino. El tono en el vino se ve parcialmente afectado por el nivel de pH del vino. 
+
+12. **OD280.OD315** : Concentración de esas proteínas en vinos diluidos.
+
+13. **Prolina (Proline)** : La prolina (símbolo Pro o P) es un aminoácido proteinogénico que se utiliza en la biosíntesis de proteínas.
+
+14. **Variable 14 (var 14)** : Sin información. 
+
+##Análisis
+
+###Resumen estadístico del conjunto de datos
+
+```{r}
+summary(datos)
+```
+
+**Correlaciones entre las variables**
+
+Podemos ver que, una vez que los los *flavanoides* y los *fenoles no flavanoides* son parte del *contenido fenólico* (Total_Phenoles) estas variables están fuertemente relacionadas entre sí. También se puede observar que  los *flavanoides* y los *fenoles no flavanoides* junto con la *prolina* juegan un papel importante en la *intensidad del color*. 
+
+Las proteínas *OD280.OD315* parecen estar relacionadas (negativamente) con el *tono* (hue) y la *ceniza* (Ash).
+
+```{r}
+cor_matrix <- cor(datos, method = "pearson", use = "complete.obs")
+cor_matrix
+corrplot(cor_matrix, type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+```
+
+
+**Estandarización de los datos**
+
+```{r}
+scaled_datos <- scale(datos)
+```
+
+**Gráficas de dispersión de las variables**
+
+```{r}
+pairs(scaled_datos,main="Dispersión",col="coral3",upper.panel = NULL)   
+
+```
+
+###Análisis por Componentes Principales
+
+```{r}
+acp<-prcomp(scaled_datos,center = TRUE, scale. = TRUE)
+```
+
+Proporción de la varianza y varianza acumulada
+
+Con las primeras 2 componentes principales se obtine el 55% de la varianza, además necesitamos las primeras 5 componentes principales para obtener el 80% de la varianza.
+
+```{r}
+summary(acp)
+```
+
+Graficando los datos (estadarizados) respecto a las 2 primeras componentes principales se observa que tienen forma "parabólica". 
+
+```{r}
+CP1<-acp$x[,1]
+CP2<-acp$x[,2]
+plot(CP1,CP2,main="CP uno y dos",col="blueviolet", xlab = "Componente Principal 1", ylab = "Componente Principal 2")
+```
+
+Representación bidimiensional de las 2 primeras componentes.
+
+Se observa que las variables que más contribuyen a las 2 primeras componentes principales son: 
+
+  1. Fenoles no flavanoides (Non_Flavanoides_Phenoles)
+  2.  Flavanoides
+  3.  Prolina (Proline)
+  4.  Ácido málico (Malic_acid)
+  5.  var14
+  6.  Tono (Hue)
+
+Las variables "mejor" representadas por la primera componente son:
+  
+  1. Fenoles no flavanoides (Non_Flavanoides_Phenoles)
+  2. Magnesio (Magnesium)
+  3. Intensidad de color (Color_intensity)
+  4. Proantocianidinas (Proanthocyanins)
+  
+Las variables "mejor" representadas por la segunda componente son:
+  
+  1. Ceniza alcalina (Ash_Alcalinity)
+  2. Tono (Huen)
+
+```{r}
+acp$rotation
+fviz_pca_biplot(acp, repel = FALSE, col.var = "mediumvioletred", col.ind = "#696969")
+fviz_pca_var(acp, col.var = "contrib", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE )
+```
+
+###Cluster análisis
+
+####K-means
+
+Las observaciones se dividen en grupos K (en este caso k = 3 )y se reorganizan para formar los grupos más cohesivos posibles de acuerdo con un criterio dado. El algoritmo K-means es el siguiente:
+
+  1.  Selecciona K centroides (K filas elegidas al azar)
+  2.  Asigna cada punto de datos a su centroide más cercano
+  3.  Recalcula los centroides como el promedio de todos los puntos de datos en un grupo (es decir, los centroides son vectores medios de longitud p, donde p es el número de variables)
+  4.  Asigna puntos de datos a sus centroides más cercanos
+  5.  Continúa con los pasos 3 y 4 hasta que las observaciones no se reasignen o se alcance el número máximo  de iteraciones (R usa 10 como valor predeterminado).
+  
+*Nota* : Las siguientes gráficas están respecto a las 2 primeras componentes.
+  
+```{r}
+km <- kmeans(scaled_datos, 3)
+fviz_cluster(km, datos, ellipse.type = "norm")
+```
+
+Pruebo para distintas valores de k (k=2, k=3, k=4, k=7)
+
+Observo que para k = 2 los clusters son muy claros (parece una agrupación intuitiva), de igual forma para k =3. Para k = 4 y k = 7 los clusters están menos claros.
+
+```{r}
+kmacp2 <- kmeans(scaled_datos ,2)
+k2 <- fviz_cluster(kmacp2, scaled_datos, geom = "point", ellipse = FALSE)
+kmacp3 <- kmeans(scaled_datos , 3)
+k3 <- fviz_cluster(kmacp3, scaled_datos, geom = "point", ellipse = FALSE)
+kmacp4 <- kmeans(scaled_datos ,4)
+k4 <- fviz_cluster(kmacp4, scaled_datos, geom = "point", ellipse = FALSE)
+kmacp7 <- kmeans(scaled_datos ,7)
+k7 <- fviz_cluster(kmacp7, scaled_datos, geom = "point", ellipse = FALSE)
+grid.arrange(k2, k3, k4,k7, nrow = 2)
+```
+
+Comparo la clasificación dada con la obtenida con k-means clustering
+
+Observo que los clusters dados por el método de k-means (k = 3) se parecen bastante a la clasificación dada, con algunas excepciones en las "fronteras" de los clusters.
+
+
+```{r}
+p1 <- fviz_cluster(kmacp3, scaled_datos, geom = "point", ellipse = FALSE,  ggtitle = "k-means clustering", ggtheme = theme_minimal()) + geom_hline(yintercept = 0) + geom_vline(xintercept = 0 ) 
+p2 <- fviz_pca_ind(acp, ggtitle="Clasificación dada", repel = FALSE, col.ind = data$Tipo, geom = "point", ggtheme = theme_minimal())  + geom_hline(yintercept = 0) + geom_vline(xintercept = 0 ) 
+grid.arrange(p1, p2, nrow = 1)
+```
+
+####KNN
+
+El algoritmo KNN o k-vecinos más cercanos es uno de los algoritmos de aprendizaje automático más simples y es un ejemplo de aprendizaje basado en instancias, donde los datos nuevos se clasifican según las instancias etiquetadas y almacenadas. La distancia (generalmente la distancia euclidiana) entre los datos almacenados y la nueva instancia se calcula por medio de algún tipo de medida de similitud. Luego, este valor de similitud se usa para realizar un modelado predictivo. El modelado predictivo es una clasificación, la asignación de una etiqueta o una clase a la nueva instancia, o la regresión, la asignación de un valor a la nueva instancia.
+
+A continuación se usará el algoritmo KNN para predecir los tipos de vinos. 
+
+Primero genero número aleatorios para tomar una muestra de aprox 80% de los datos.
+
+```{r}
+data <- data.frame(data)
+ran <- sample(1:nrow(data), 0.8 * nrow(data)) 
+```
+
+Normalizo los datos debido a que algunas columnas cuentan con escalas mayores a otras, el modelo considera que todas las columnas tienen la misma influencia para la clasificación, por lo que, para evitar que
+la magnitud de cualquier atributo influya más que los otros se  normalizan los datos.
+
+```{r}
+nor <-function(x) { (x - min(x) )/( max(x) - min(x))   }
+data_norm <- as.data.frame(lapply(data[,c(2,3,4,5,6,7,8,9,10,11,12,13,14)], nor))
+summary(data_norm)
+```
+
+Selecciono los datos que se usarán para "aprender"" y los que se usarán para "predecir"
+
+```{r}
+data_train <- data_norm[ran,] 
+data_test <- data_norm[-ran,]
+```
+
+Quito la primer columna (Tipo) de los datos que se usarán para "aprender" porque serán el argumento de la función knn (de la librería "class") que implementa el algoritmo.
+
+```{r}
+data_target_category <- data[ran,1]
+data_test_category <- data[-ran,1]
+```
+
+Implemento el algoritmo usando k = 13.
+
+```{r}
+pr <- knn(data_train,data_test,cl=data_target_category,k=13)
+```
+
+Reviso en como fue la clasificación por categoria.
+```{r}
+tab <- table(pr, data_test_category)
+tab
+```
+
+Checo que tan acertado es el modelo dividiento las predicciones correctas entre el número total de predicciones
+
+```{r}
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+accuracy(tab)
+```
+
+##Conclusión
+
+Con base en el análisis anterior, se puede concluir:
+
+  1. La varianza acumulada de las primeras dos compenentes (55%) no es muy alta, sin embargo funcionan muy      acertadamente para predecir los tipos de vinos dados con los métodos k-means y kNN.
+  2. Usando el método k-means la clasificación obtenida de los tipos de vino es muy parecida a la               clasificación dada.
+  3. Usando el método kNN para predecir los tipos de vinos se obtiene una clasificción muy acertada (95% -     100%) por lo que el método funciona bastante bien.
+
+
